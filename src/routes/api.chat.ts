@@ -29,9 +29,10 @@ export const Route = createFileRoute("/api/chat")({
 
         const key = process.env.GEMINI_API_KEY;
 
-        console.log("GEMINI_API_KEY exists:", !!key);
         if (!key) {
-          throw new Error("GEMINI_API_KEY_NOT_FOUND");
+          return new Response("Missing GEMINI_API_KEY", {
+             status: 500,
+             });
         }
 
         // Best-effort logging — never block the chat if logging fails.
@@ -77,7 +78,7 @@ export const Route = createFileRoute("/api/chat")({
         const gateway = createGeminiProvider(key);
 
         const result = streamText({
-          model: gateway("gemini-2.5-flash"),
+          model: gateway("gemini-2.0-flash"),
           system: RECEPTIONIST_SYSTEM_PROMPT,
           messages: await convertToModelMessages(messages),
           tools: receptionistTools,
