@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { convertToModelMessages, streamText, stepCountIs, type UIMessage } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import {
+  convertToModelMessages,
+  streamText,
+  stepCountIs,
+  type UIMessage,
+} from "ai";
+import { createGeminiProvider } from "@/lib/ai-gateway.server";
 import {
   receptionistTools,
   RECEPTIONIST_SYSTEM_PROMPT,
@@ -14,16 +19,27 @@ export const Route = createFileRoute("/api/chat")({
           messages?: UIMessage[];
           sessionId?: string;
         };
+
         const messages = body.messages;
         const sessionId = body.sessionId;
+
         if (!Array.isArray(messages)) {
           return new Response("messages required", { status: 400 });
         }
-        const key = process.env.LOVABLE_API_KEY;
-        if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+
+        const key = process.env.GEMINI_API_KEY;
+
+        if (!key) {
+          return new Response("Missing GEMINI_API_KEY", {
+            status: 500,
+          });
+        }
 
         // Best-effort logging — never block the chat if logging fails.
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { supabaseAdmin } = await import(
+          "@/integrations/supabase/client.server"
+        );
+
         if (sessionId) {
           try {
             await supabaseAdmin.from("call_logs").upsert(
@@ -33,14 +49,19 @@ export const Route = createFileRoute("/api/chat")({
                 status: "active",
                 last_activity_at: new Date().toISOString(),
               },
-              { onConflict: "session_id" },
+              { onConflict: "session_id" }
             );
-            const lastUser = [...messages].reverse().find((m: any) => m.role === "user");
+
+            const lastUser = [...messages]
+              .reverse()
+              .find((m: any) => m.role === "user");
+
             if (lastUser) {
               const text = (lastUser.parts ?? [])
                 .filter((p: any) => p.type === "text")
                 .map((p: any) => p.text)
                 .join("");
+
               if (text) {
                 await supabaseAdmin.from("ai_conversation_logs").insert({
                   session_id: sessionId,
@@ -54,34 +75,48 @@ export const Route = createFileRoute("/api/chat")({
           }
         }
 
-        const gateway = createLovableAiGatewayProvider(key);
+        const gateway = createGeminiProvider(key);
+
         const result = streamText({
-          model: gateway("google/gemini-3-flash-preview"),
+          model: gateway("gemini-2.5-flash"),
           system: RECEPTIONIST_SYSTEM_PROMPT,
           messages: await convertToModelMessages(messages),
           tools: receptionistTools,
           stopWhen: stepCountIs(50),
+
           onError: ({ error }) => {
             console.error("[receptionist chat] stream error:", error);
           },
+
           onFinish: async ({ text, toolCalls, toolResults }) => {
             if (!sessionId) return;
+
             try {
               let appointmentId: string | null = null;
               let bookingSucceeded = false;
+
               const calls = toolCalls ?? [];
               const results = toolResults ?? [];
+
               const resultByCallId = new Map<string, any>();
+
               for (const r of results as any[]) {
                 resultByCallId.set(r.toolCallId, r);
               }
+
               for (const call of calls as any[]) {
                 const res: any = resultByCallId.get(call.toolCallId);
                 const output = res?.output ?? res?.result;
-                if (call.toolName === "book_appointment" && output?.ok && output?.appointment?.id) {
+
+                if (
+                  call.toolName === "book_appointment" &&
+                  output?.ok &&
+                  output?.appointment?.id
+                ) {
                   appointmentId = output.appointment.id;
                   bookingSucceeded = true;
                 }
+
                 await supabaseAdmin.from("ai_conversation_logs").insert({
                   session_id: sessionId,
                   role: "tool",
@@ -89,11 +124,13 @@ export const Route = createFileRoute("/api/chat")({
                   tool_input: call.input ?? call.args ?? null,
                   tool_output: output ?? null,
                   appointment_id:
-                    call.toolName === "book_appointment" && output?.appointment?.id
+                    call.toolName === "book_appointment" &&
+                    output?.appointment?.id
                       ? output.appointment.id
                       : null,
                 });
               }
+
               if (text && text.trim()) {
                 await supabaseAdmin.from("ai_conversation_logs").insert({
                   session_id: sessionId,
@@ -101,13 +138,16 @@ export const Route = createFileRoute("/api/chat")({
                   content: text,
                 });
               }
+
               const patch: any = {
                 last_activity_at: new Date().toISOString(),
               };
+
               if (appointmentId) {
                 patch.appointment_id = appointmentId;
                 patch.booking_succeeded = bookingSucceeded;
               }
+
               await supabaseAdmin
                 .from("call_logs")
                 .update(patch)
@@ -117,7 +157,10 @@ export const Route = createFileRoute("/api/chat")({
             }
           },
         });
-        return result.toUIMessageStreamResponse({ originalMessages: messages });
+
+        return result.toUIMessageStreamResponse({
+          originalMessages: messages,
+        });
       },
     },
   },
