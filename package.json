@@ -1,5 +1,6 @@
 {
   "name": "tanstack_start_ts",
+  "packageManager": "npm@10",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -12,7 +13,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.82",
+    "@ai-sdk/google": "^3.0.80",
     "@ai-sdk/openai-compatible": "^2.0.48",
     "@ai-sdk/react": "^3.0.199",
     "@hookform/resolvers": "^5.2.2",

@@ -29,10 +29,9 @@ export const Route = createFileRoute("/api/chat")({
 
         const key = process.env.GEMINI_API_KEY;
 
+        console.log("GEMINI_API_KEY exists:", !!key);
         if (!key) {
-          return new Response("Missing GEMINI_API_KEY", {
-            status: 500,
-          });
+          throw new Error("GEMINI_API_KEY_NOT_FOUND");
         }
 
         // Best-effort logging — never block the chat if logging fails.
