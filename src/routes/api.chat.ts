@@ -78,7 +78,7 @@ export const Route = createFileRoute("/api/chat")({
         const gateway = createGeminiProvider(key);
 
         const result = streamText({
-          model: gateway("gemini-2.0-flash"),
+          model: gateway("gemini-3-flash-preview"),
           system: RECEPTIONIST_SYSTEM_PROMPT,
           messages: await convertToModelMessages(messages),
           tools: receptionistTools,
