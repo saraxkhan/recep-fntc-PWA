@@ -1,23 +1,20 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState, useRouter } from "@tanstack/react-router";
-import { Calendar, Users, Stethoscope, MessageSquare, BarChart3, ShieldCheck, LogOut, Loader2, FileClock } from "lucide-react";
+import { Calendar, Users, Stethoscope, MessageSquare, BarChart3, ShieldCheck, LogOut, Loader2, FileClock, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-
 export const Route = createFileRoute("/admin")({
   ssr: false,
   head: () => ({ meta: [{ title: "Admin · MediVoice" }] }),
   component: AdminLayout,
 });
-
 function AdminLayout() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "ok" | "denied">("loading");
   const [email, setEmail] = useState<string | null>(null);
-
   useEffect(() => {
     let mounted = true;
     async function check() {
@@ -44,13 +41,11 @@ function AdminLayout() {
       sub.subscription.unsubscribe();
     };
   }, [navigate]);
-
   async function signOut() {
     await supabase.auth.signOut();
     await router.invalidate();
     navigate({ to: "/auth" });
   }
-
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground gap-2">
@@ -58,7 +53,6 @@ function AdminLayout() {
       </div>
     );
   }
-
   if (status === "denied") {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
@@ -76,11 +70,11 @@ function AdminLayout() {
       </div>
     );
   }
-
   const tabs = [
     { to: "/admin", label: "Appointments", icon: Calendar, exact: true },
     { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
     { to: "/admin/conversations", label: "AI Conversations", icon: MessageSquare },
+    { to: "/admin/voice-calls", label: "Voice Calls", icon: Phone },
     { to: "/admin/doctors", label: "Doctors", icon: Stethoscope },
     { to: "/admin/patients", label: "Patients", icon: Users },
     { to: "/admin/audit", label: "Audit Logs", icon: FileClock },
