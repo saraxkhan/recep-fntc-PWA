@@ -28,6 +28,8 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
+# Lovable editor metadata (not part of the build)
+.lovable/
 *.suo
 *.ntvs*
 *.njsproj
